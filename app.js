@@ -11,53 +11,76 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 const userSchema = new mongoose.Schema({
-    email: String,
-    password: String
+  username: String,
+  password: String
 });
 const User = mongoose.model('User', userSchema);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(session({
-    secret: '@#$@;lkj',
-    resave: false,
-    saveUninitialized: true 
+  secret: '!@%^&*()_+',
+  resave: false,
+  saveUninitialized: true
 }));
+app.use(express.static('public'));
 
 app.get('/', (req, res) => {
-    res.send('Welcome to the login page!');
-  });
-  
-  app.get('/login', (req, res) => {
-    res.sendFile(__dirname + '/login.html');
-  });
-  
-  app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-  
-    try {
-      const user = await User.findOne({ email });
-  
-      if (!user || user.password !== password) {
-        res.send('Invalid email or password');
-      } else {
-        req.session.loggedIn = true;
-        res.redirect('/dashboard');
-      }
-    } catch (error) {
-      console.error(error);
-      res.send('An error occurred');
-    }
-  });
-  
-  app.get('/dashboard', (req, res) => {
-    if (req.session.loggedIn) {
-      res.send('Welcome to the dashboard!');
+  res.send('Welcome to the login page!<br><a href="login">Login</a><br><a href="register">Register</a>');
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/login.html');
+});
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+
+    if (!user || user.password !== password) {
+      res.send('Invalid username or password');
     } else {
-      res.redirect('/login');
+      req.session.loggedIn = true;
+      res.redirect('/dashboard');
     }
-  });
-  
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-  
+  } catch (error) {
+    console.error(error);
+    res.send('An error occurred');
+  }
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(__dirname + '/public/register.html');
+});
+
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ username });
+
+    if (existingUser) {
+      res.send('Username already exists');
+    } else {
+      const newUser = new User({ username, password });
+      await newUser.save();
+      res.send('Registration successful. You can now <a href="/login">login</a>.');
+    }
+  } catch (error) {
+    console.error(error);
+    res.send('An error occurred');
+  }
+});
+
+app.get('/dashboard', (req, res) => {
+  if (req.session.loggedIn) {
+    res.send('Welcome to the dashboard!');
+  } else {
+    res.redirect('/login');
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
